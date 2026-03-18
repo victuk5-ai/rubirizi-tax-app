@@ -1,66 +1,64 @@
 import streamlit as st
-import pandas as pd
 
-# --- APP CONFIGURATION ---
-st.set_page_config(page_title="Uganda Customs Pro", page_icon="🇺🇬")
+# --- Page Configuration ---
+st.set_page_config(page_title="Rubirizi Customs Tax Calculator", page_icon="🇺🇬")
 
-st.title("🇺🇬 Uganda Customs Duty & Tax Calculator")
-st.markdown("### Powered by Rubirizi Clearing & Forwarding Agency")
-st.write("Calculate your URA taxes instantly for shipments entering Uganda.")
+# --- Custom Styling ---
+st.markdown("""
+    <style>
+    .main { background-color: #f4f7f6; }
+    .stButton>button { width: 100%; background-color: #1a2a6c; color: white; border-radius: 5px; }
+    .result-box { padding: 20px; background-color: white; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+    </style>
+    """, unsafe_allow_input=True)
 
-# --- INPUT SECTION ---
+st.title("🇺🇬 Rubirizi Customs Tax Calculator")
+st.write("Estimate your URA Import Taxes accurately.")
+
+# --- Sidebar Inputs ---
 with st.sidebar:
-    st.header("Shipment Details")
-    # Current March 2026 Exchange Rate (~3764 UGX)
-    exchange_rate = 3764.0 
+    st.header("Input Details")
+    cif_usd = st.number_input("CIF Value (USD)", min_value=0.0, step=100.0)
+    exchange_rate = st.number_input("Exchange Rate (UGX)", min_value=1.0, value=3800.0)
     
-    currency = st.selectbox("Currency", ["USD", "UGX"])
-    cif_input = st.number_input(f"Enter CIF Value ({currency})", min_value=0.0)
+    duty_rate = st.selectbox("Import Duty Rate", 
+                             options=[0, 10, 25, 35], 
+                             format_func=lambda x: f"{x}%")
     
-    cif_value_ugx = cif_input if currency == "UGX" else cif_input * exchange_rate
+    apply_wht = st.checkbox("Apply Withholding Tax (6%)", value=True)
 
-    category = st.selectbox("Item Category", 
-                            ["Finished Goods (25%)", 
-                             "Intermediate Goods (10%)", 
-                             "Raw Materials / Capital Goods (0%)"])
+# --- Calculation Logic ---
+# 1. Convert CIF to UGX
+cif_ugx = cif_usd * exchange_rate
 
-# Define Duty Rate
-duty_rate = 0.25 if "25%" in category else (0.10 if "10%" in category else 0.00)
+# 2. Calculate Import Duty (ID)
+import_duty = cif_ugx * (duty_rate / 100)
 
-# --- CALCULATION ENGINE ---
-if st.button("Calculate My Taxes"):
-    import_duty = cif_value_ugx * duty_rate
-    vat = (cif_value_ugx + import_duty) * 0.18
-    wht = cif_value_ugx * 0.06
-    infra = cif_value_ugx * 0.015
-    idf = cif_value_ugx * 0.01
+# 3. Calculate VAT (Standard 18% on CIF + ID)
+vat_base = cif_ugx + import_duty
+vat = vat_base * 0.18
 
-    total_payable = import_duty + vat + wht + infra + idf
+# 4. Calculate WHT (6% on CIF)
+wht = cif_ugx * 0.06 if apply_wht else 0
 
-    st.divider()
-    col1, col2 = st.columns(2)
-    with col1:
-        st.metric("Total Payable (UGX)", f"{total_payable:,.0f}")
-    with col2:
-        st.metric("In USD (Est.)", f"{(total_payable/exchange_rate):,.2f}")
+# 5. Total Taxes
+total_taxes = import_duty + vat + wht
 
-    # Tax data for display
-    tax_data = {
-        "Tax Component": ["Import Duty", "VAT (18%)", "Withholding Tax (6%)", "Infra Levy (1.5%)", "IDF (1%)"],
-        "Amount (UGX)": [import_duty, vat, wht, infra, idf]
-    }
-    df = pd.DataFrame(tax_data)
-    st.table(df.assign(**{"Amount (UGX)": df["Amount (UGX)"].map('{:,.0f}'.format)}))
+# --- Display Results ---
+st.subheader("Tax Breakdown (UGX)")
 
-    st.success(f"Assessment Complete. Contact Tukesiga Victor for formal clearance.")
-    
-    # --- DOWNLOAD & CONTACT BUTTONS ---
-    col_a, col_b = st.columns(2)
-    with col_a:
-        csv = df.to_csv(index=False).encode('utf-8')
-        st.download_button("📥 Download Estimate", csv, "URA_Estimate_Victor.csv", "text/csv")
-    with col_b:
-        whatsapp_link = "https://wa.me/256706631303?text=Hello%20Victor,%20I%20need%20help%20clearing%20my%20goods."
-        st.link_button("💬 WhatsApp Victor", whatsapp_link)
+col1, col2 = st.columns(2)
 
-st.info("Note: These are estimates based on standard URA rates.")
+with col1:
+    st.metric("Import Duty", f"{import_duty:,.0f}")
+    st.metric("VAT (18%)", f"{vat:,.0f}")
+
+with col2:
+    st.metric("WHT (6%)", f"{wht:,.0f}")
+    st.metric("Total Payable", f"{total_taxes:,.0f}", delta_color="inverse")
+
+st.info(f"**Total Taxable Value (CIF in UGX):** {cif_ugx:,.0f}")
+
+# --- Footer Disclaimer ---
+st.divider()
+st.caption("Disclaimer: This tool is for estimation purposes for clearing agents and importers. Refer to Asycuda World for official URA assessments.")
