@@ -1,84 +1,126 @@
 import streamlit as st
 
-# 1. Page Setup
-st.set_page_config(page_title="Rubirizi Tax App", page_icon="🇺🇬")
+# 1. Page Configuration
+st.set_page_config(page_title="Rubirizi Tax Pro", page_icon="🇺🇬", layout="centered")
 
-# 2. Professional Header with Victor's Branding
+# 2. Professional Branding & CSS
 st.markdown("""
     <style>
-    .main { background-color: #f4f7f6; }
+    .main { background-color: #f8f9fa; }
     .stHeader { 
         background-color: #1a2a6c; 
-        padding: 20px; 
-        border-radius: 10px; 
+        padding: 25px; 
+        border-radius: 12px; 
         color: white; 
         text-align: center;
-        margin-bottom: 25px;
-        border-bottom: 5px solid #f1c40f;
-    }
-    .footer {
-        text-align: center;
-        padding: 10px;
-        font-size: 0.8rem;
-        color: #666;
+        border-bottom: 6px solid #f1c40f;
+        margin-bottom: 20px;
     }
     .whatsapp-btn {
         background-color: #25D366;
         color: white;
-        padding: 10px 20px;
+        padding: 15px;
         text-decoration: none;
-        border-radius: 5px;
+        border-radius: 10px;
         font-weight: bold;
-        display: inline-block;
-        margin-top: 10px;
+        display: block;
+        text-align: center;
+        margin-top: 20px;
+    }
+    .total-card {
+        background-color: #ffffff;
+        padding: 20px;
+        border-left: 8px solid #d32f2f;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     </style>
     <div class="stHeader">
         <h1>Rubirizi Customs Tax Calculator</h1>
-        <p>Official URA Import Estimation Tool</p>
-        <p style="font-size: 0.8rem; opacity: 0.8;">Developed by Victor</p>
+        <p>Professional URA Import & Motor Vehicle Estimation</p>
+        <p style="font-size: 0.9rem; font-weight: bold; color: #f1c40f;">Developed by Victor</p>
     </div>
     """, unsafe_allow_html=True)
 
-# 3. User Inputs
-cif_usd = st.number_input("CIF Value (USD)", min_value=0.0, step=100.0)
-# Updated default rate to 3800
-exchange_rate = st.number_input("Exchange Rate (UGX)", min_value=1.0, value=3800.0)
+# 3. Input Sidebar
+st.sidebar.header("Global Settings")
+calc_mode = st.sidebar.radio("Clearance Category", ["General Goods", "Motor Vehicle"])
+exchange_rate = st.sidebar.number_input("Exchange Rate (1 USD to UGX)", value=3800.0)
 
-duty_rate = st.selectbox("Import Duty Rate", 
-                         options=[0, 10, 25, 35], 
-                         index=2,
-                         format_func=lambda x: f"{x}%")
+# 4. Main Input Form
+with st.container():
+    cif_usd = st.number_input("Enter CIF Value (USD)", min_value=0.0, step=50.0)
+    cif_ugx = cif_usd * exchange_rate
 
-apply_wht = st.checkbox("Include WHT (6%)", value=True)
+    col_a, col_b = st.columns(2)
+    
+    with col_a:
+        duty_rate = st.selectbox("Import Duty", [0, 10, 25, 35], index=2, format_func=lambda x: f"{x}%")
+        infra_levy = st.checkbox("Infrastructure Levy (1.5%)", value=True)
+    
+    with col_b:
+        apply_wht = st.checkbox("Withholding Tax (6%)", value=True)
+        if calc_mode == "Motor Vehicle":
+            reg_fee = st.number_input("Registration Fee (UGX)", value=1200000)
+        else:
+            stamp_duty = st.number_input("Stamp Duty/Other (UGX)", value=35000)
 
-# 4. Math Logic
-cif_ugx = cif_usd * exchange_rate
+# 5. Advanced Logic (Motor Vehicle Age)
+env_levy = 0.0
+if calc_mode == "Motor Vehicle":
+    st.subheader("Vehicle Age Assessment")
+    veh_age = st.radio("Age of Vehicle", 
+                       ["New to 8 Years", "9 to 14 Years", "15+ Years"], 
+                       horizontal=True)
+    if "9 to 14" in veh_age:
+        env_levy = cif_ugx * 0.35
+    elif "15+" in veh_age:
+        env_levy = cif_ugx * 0.50
+
+# 6. Final Math Logic
 import_duty = cif_ugx * (duty_rate / 100)
-vat = (cif_ugx + import_duty) * 0.18
-wht = cif_ugx * 0.06 if apply_wht else 0
-total_taxes = import_duty + vat + wht
+infrastructure = (cif_ugx * 0.015) if infra_levy else 0
+wht = (cif_ugx * 0.06) if apply_wht else 0
 
-# 5. Displaying Results
+# VAT is 18% of (CIF + Import Duty + Infrastructure Levy)
+vat_base = cif_ugx + import_duty + infrastructure
+vat = vat_base * 0.18
+
+# Total Calculation
+total_fees = import_duty + vat + wht + infrastructure + env_levy
+if calc_mode == "Motor Vehicle":
+    total_fees += reg_fee
+else:
+    total_fees += stamp_duty
+
+# 7. Display Results
 st.divider()
-st.subheader("Tax Breakdown (UGX)")
+st.subheader("Detailed Breakdown")
 
-col1, col2 = st.columns(2)
-with col1:
-    st.metric("Import Duty", f"{import_duty:,.0f}")
-    st.metric("VAT (18%)", f"{vat:,.0f}")
+res_col1, res_col2 = st.columns(2)
+with res_col1:
+    st.write(f"**Import Duty:** {import_duty:,.0f} UGX")
+    st.write(f"**VAT (18%):** {vat:,.0f} UGX")
+    st.write(f"**Infrastructure (1.5%):** {infrastructure:,.0f} UGX")
 
-with col2:
-    st.metric("WHT (6%)", f"{wht:,.0f}")
-    st.info(f"**Total Payable: {total_taxes:,.0f} UGX**")
+with res_col2:
+    st.write(f"**WHT (6%):** {wht:,.0f} UGX")
+    if calc_mode == "Motor Vehicle":
+        st.write(f"**Env. Levy:** {env_levy:,.0f} UGX")
+        st.write(f"**Reg. Fees:** {reg_fee:,.0f} UGX")
 
-# 6. Contact Section
+st.markdown(f"""
+    <div class="total-card">
+        <h2 style="margin:0; color:#d32f2f;">Total Payable</h2>
+        <h1 style="margin:0;">UGX {total_fees:,.0f}</h1>
+    </div>
+    """, unsafe_allow_html=True)
+
+# 8. WhatsApp Lead Generation
+whatsapp_msg = f"Hello Victor, I need a clearance quote for a {calc_mode} with CIF {cif_usd} USD. Total estimate was {total_fees:,.0f} UGX."
+whatsapp_url = f"https://wa.me/256741899165?text={whatsapp_msg.replace(' ', '%20')}"
+
+st.markdown(f'<a href="{whatsapp_url}" class="whatsapp-btn">🚀 Hire Victor for Clearance</a>', unsafe_allow_html=True)
+
 st.divider()
-st.write("### Need Professional Clearing?")
-st.write("Contact **Rubirizi Clearing and Forwarding Agency** for a formal quote.")
-
-# WhatsApp Link for Victor
-whatsapp_url = "https://wa.me/256741899165?text=Hello%20Victor,%20I%20used%20your%20Tax%20Calculator%20and%20need%20help%20with%20clearing%20my%20goods."
-st.markdown(f'<a href="{whatsapp_url}" class="whatsapp-btn">Chat with Victor on WhatsApp</a>', unsafe_allow_html=True)
-
-st.markdown('<div class="footer">© 2026 Rubirizi Tax App | Authorized Clearing & Forwarding</div>', unsafe_allow_html=True)
+st.caption("© 2026 Rubirizi Clearing & Forwarding Agency. This tool provides estimates only.")
