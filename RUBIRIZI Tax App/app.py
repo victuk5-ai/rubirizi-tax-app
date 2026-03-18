@@ -1,0 +1,66 @@
+import streamlit as st
+import pandas as pd
+
+# --- APP CONFIGURATION ---
+st.set_page_config(page_title="Uganda Customs Pro", page_icon="🇺🇬")
+
+st.title("🇺🇬 Uganda Customs Duty & Tax Calculator")
+st.markdown("### Powered by Rubirizi Clearing & Forwarding Agency")
+st.write("Calculate your URA taxes instantly for shipments entering Uganda.")
+
+# --- INPUT SECTION ---
+with st.sidebar:
+    st.header("Shipment Details")
+    # Current March 2026 Exchange Rate (~3764 UGX)
+    exchange_rate = 3764.0 
+    
+    currency = st.selectbox("Currency", ["USD", "UGX"])
+    cif_input = st.number_input(f"Enter CIF Value ({currency})", min_value=0.0)
+    
+    cif_value_ugx = cif_input if currency == "UGX" else cif_input * exchange_rate
+
+    category = st.selectbox("Item Category", 
+                            ["Finished Goods (25%)", 
+                             "Intermediate Goods (10%)", 
+                             "Raw Materials / Capital Goods (0%)"])
+
+# Define Duty Rate
+duty_rate = 0.25 if "25%" in category else (0.10 if "10%" in category else 0.00)
+
+# --- CALCULATION ENGINE ---
+if st.button("Calculate My Taxes"):
+    import_duty = cif_value_ugx * duty_rate
+    vat = (cif_value_ugx + import_duty) * 0.18
+    wht = cif_value_ugx * 0.06
+    infra = cif_value_ugx * 0.015
+    idf = cif_value_ugx * 0.01
+
+    total_payable = import_duty + vat + wht + infra + idf
+
+    st.divider()
+    col1, col2 = st.columns(2)
+    with col1:
+        st.metric("Total Payable (UGX)", f"{total_payable:,.0f}")
+    with col2:
+        st.metric("In USD (Est.)", f"{(total_payable/exchange_rate):,.2f}")
+
+    # Tax data for display
+    tax_data = {
+        "Tax Component": ["Import Duty", "VAT (18%)", "Withholding Tax (6%)", "Infra Levy (1.5%)", "IDF (1%)"],
+        "Amount (UGX)": [import_duty, vat, wht, infra, idf]
+    }
+    df = pd.DataFrame(tax_data)
+    st.table(df.assign(**{"Amount (UGX)": df["Amount (UGX)"].map('{:,.0f}'.format)}))
+
+    st.success(f"Assessment Complete. Contact Tukesiga Victor for formal clearance.")
+    
+    # --- DOWNLOAD & CONTACT BUTTONS ---
+    col_a, col_b = st.columns(2)
+    with col_a:
+        csv = df.to_csv(index=False).encode('utf-8')
+        st.download_button("📥 Download Estimate", csv, "URA_Estimate_Victor.csv", "text/csv")
+    with col_b:
+        whatsapp_link = "https://wa.me/256706631303?text=Hello%20Victor,%20I%20need%20help%20clearing%20my%20goods."
+        st.link_button("💬 WhatsApp Victor", whatsapp_link)
+
+st.info("Note: These are estimates based on standard URA rates.")
