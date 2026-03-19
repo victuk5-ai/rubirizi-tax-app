@@ -1,134 +1,110 @@
 
 import streamlit as st
 
-# 1. Page Configuration
-st.set_page_config(page_title="Rubirizi Tax Pro", page_icon="🇺🇬", layout="centered")
+# --- PAGE CONFIGURATION ---
+st.set_page_content(
+    page_title="Rubirizi Tax Pro",
+    page_icon="⚖️",
+    layout="centered"
+)
 
-# 2. Professional Branding & CSS
-st.markdown("""
+# --- ADVANCED THEME & SCROLL FIX (CSS) ---
+st.markdown(
+    """
     <style>
-    .main { background-color: #f8f9fa; }
-    .stHeader { 
-        background-color: #1a2a6c; 
-        padding: 25px; 
-        border-radius: 12px; 
-        color: white; 
-        text-align: center;
-        border-bottom: 6px solid #f1c40f;
-        margin-bottom: 20px;
+    /* Prevents accidental pull-to-refresh on mobile */
+    html, body, [data-testid="stAppViewContainer"] {
+        overscroll-behavior-y: contain;
+        scroll-behavior: smooth;
     }
-    .whatsapp-btn {
-        background-color: #25D366;
-        color: white;
-        padding: 15px;
-        text-decoration: none;
+    
+    /* Custom Styling for the Results Box */
+    .stAlert {
+        border-radius: 12px;
+    }
+    
+    /* Support for Dark/Light Mode visibility on the Total Box */
+    .total-container {
+        padding: 20px;
         border-radius: 10px;
-        font-weight: bold;
-        display: block;
-        text-align: center;
-        margin-top: 20px;
-    }
-    /* Lighting Fix for the Total Box */
-    .total-box {
-        background-color: #ffffff; 
-        padding: 30px; 
-        border-radius: 15px; 
-        border: 2px solid #1a2a6c;
-        box-shadow: 0px 4px 15px rgba(0,0,0,0.1);
-        text-align: center;
-        margin-top: 20px;
-        margin-bottom: 20px;
+        border-left: 5px solid #25D366;
+        background-color: rgba(151, 151, 151, 0.1);
+        margin: 10px 0;
     }
     </style>
-    <div class="stHeader">
-        <h1>Rubirizi Customs Tax Calculator</h1>
-        <p>Professional URA Import & Motor Vehicle Estimation</p>
-        <p style="font-size: 0.9rem; font-weight: bold; color: #f1c40f;">Developed by Victor</p>
-    </div>
-    """, unsafe_allow_html=True)
+    """,
+    unsafe_allow_html=True
+)
 
-# 3. Input Sidebar
-st.sidebar.header("Global Settings")
-calc_mode = st.sidebar.radio("Clearance Category", ["General Goods", "Motor Vehicle"])
-exchange_rate = st.sidebar.number_input("Exchange Rate (1 USD to UGX)", value=3800.0)
+# --- HEADER ---
+st.title("⚖️ Rubirizi Tax Pro")
+st.caption("Developed by Victor | Rubirizi Clearing & Forwarding Agency")
+st.divider()
 
-# 4. Main Input Form
-with st.container():
-    cif_usd = st.number_input("Enter CIF Value (USD)", min_value=0.0, step=50.0)
-    cif_ugx = cif_usd * exchange_rate
+# --- INPUTS ---
+col1, col2 = st.columns(2)
+with col1:
+    calc_type = st.radio("Calculation Type", ["General Goods", "Motor Vehicle"])
+    cif_usd = st.number_input("Enter CIF Value (USD):", min_value=0.0, format="%.2f")
 
-    col_a, col_b = st.columns(2)
-    
-    with col_a:
-        duty_rate = st.selectbox("Import Duty", [0, 10, 25, 35], index=2, format_func=lambda x: f"{x}%")
-        infra_levy = st.checkbox("Infrastructure Levy (1.5%)", value=True)
-    
-    with col_b:
-        apply_wht = st.checkbox("Withholding Tax (6%)", value=True)
-        if calc_mode == "Motor Vehicle":
-            reg_fee = st.number_input("Registration Fee (UGX)", value=1200000)
-        else:
-            stamp_duty = st.number_input("Stamp Duty/Other (UGX)", value=35000)
+with col2:
+    exchange_rate = st.number_input("Exchange Rate (UGX):", value=3800.0)
+    if calc_type == "Motor Vehicle":
+        vehicle_age = st.selectbox("Vehicle Age", ["Under 8 Years", "8 - 14 Years", "Over 15 Years"])
 
-# 5. Advanced Logic (Motor Vehicle Age)
+# --- CALCULATION LOGIC ---
+cif_ugx = cif_usd * exchange_rate
+import_duty = cif_ugx * 0.25
+infra_levy = cif_ugx * 0.015
 env_levy = 0.0
-if calc_mode == "Motor Vehicle":
-    st.subheader("Vehicle Age Assessment")
-    veh_age = st.radio("Age of Vehicle", 
-                       ["New to 8 Years", "9 to 14 Years", "15+ Years"], 
-                       horizontal=True)
-    if "9 to 14" in veh_age:
+
+if calc_type == "Motor Vehicle":
+    if vehicle_age == "8 - 14 Years":
         env_levy = cif_ugx * 0.35
-    elif "15+" in veh_age:
+    elif vehicle_age == "Over 15 Years":
         env_levy = cif_ugx * 0.50
 
-# 6. Final Math Logic
-import_duty = cif_ugx * (duty_rate / 100)
-infrastructure = (cif_ugx * 0.015) if infra_levy else 0
-wht = (cif_ugx * 0.06) if apply_wht else 0
-vat_base = cif_ugx + import_duty + infrastructure
-vat = vat_base * 0.18
+# VAT is 18% of (CIF + Import Duty + Infra Levy)
+vat = (cif_ugx + import_duty + infra_levy) * 0.18
+wht = cif_ugx * 0.06
+total_tax = import_duty + env_levy + infra_levy + vat + wht
 
-total_fees = import_duty + vat + wht + infrastructure + env_levy
-if calc_mode == "Motor Vehicle":
-    total_fees += reg_fee
-else:
-    total_fees += stamp_duty
-
-# 7. Detailed Breakdown
-st.divider()
-st.subheader("Detailed Breakdown")
+# --- DISPLAY RESULTS ---
+st.subheader("Tax Breakdown (UGX)")
 
 res_col1, res_col2 = st.columns(2)
 with res_col1:
-    st.write(f"**Import Duty:** {import_duty:,.0f} UGX")
-    st.write(f"**VAT (18%):** {vat:,.0f} UGX")
-    st.write(f"**Infrastructure (1.5%):** {infrastructure:,.0f} UGX")
-
+    st.write(f"**Import Duty (25%):** {import_duty:,.0f}")
+    st.write(f"**VAT (18%):** {vat:,.0f}")
 with res_col2:
-    st.write(f"**WHT (6%):** {wht:,.0f} UGX")
-    if calc_mode == "Motor Vehicle":
-        st.write(f"**Env. Levy:** {env_levy:,.0f} UGX")
-        st.write(f"**Reg. Fees:** {reg_fee:,.0f} UGX")
+    st.write(f"**Infra Levy (1.5%):** {infra_levy:,.0f}")
+    if calc_type == "Motor Vehicle":
+        st.write(f"**Env. Levy:** {env_levy:,.0f}")
+    st.write(f"**WHT (6%):** {wht:,.0f}")
 
-# 8. High-Visibility Total Box (Lighting Fix)
+# The total box is styled to work in both Light and Dark mode
 st.markdown(f"""
-    <div class="total-box">
-        <h3 style="color: #1a2a6c; margin-bottom: 5px;">Total Tax Payable</h3>
-        <h1 style="color: #d32f2f; font-size: 3rem; margin: 0;">
-            UGX {total_fees:,.0f}
-        </h1>
-        <p style="color: #7f8c8d; font-size: 0.8rem; margin-top: 10px;">
-            Estimated for Customs Entry at Nakawa
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
-
-# 9. WhatsApp Lead Generation (Using New Number: 0706631303)
-whatsapp_msg = f"Hello Victor, I need a clearance quote for a {calc_mode} with CIF {cif_usd} USD. Total estimate was {total_fees:,.0f} UGX."
-whatsapp_url = f"https://wa.me/256706631303?text={whatsapp_msg.replace(' ', '%20')}"
-
-st.markdown(f'<a href="{whatsapp_url}" class="whatsapp-btn">🚀 Hire Victor for Clearance</a>', unsafe_allow_html=True)
+<div class="total-container">
+    <p style="margin:0; font-size:1.2em;">Total Estimate</p>
+    <h1 style="margin:0; color:#25D366;">{total_tax:,.0f} UGX</h1>
+</div>
+""", unsafe_allow_html=True)
 
 st.divider()
-st.caption("© 2026 Rubirizi Clearing & Forwarding Agency. This tool provides estimates only.")
+
+# --- CALL TO ACTION ---
+st.subheader("Ready to Clear?")
+whatsapp_link = "https://wa.me/256706631303?text=Hello%20Victor,%20I%20have%20a%20tax%20estimate%20and%20need%20clearing%20services."
+
+st.markdown(f'''
+    <a href="{whatsapp_link}" target="_blank" style="text-decoration:none;">
+        <div style="width:100%; height:55px; border-radius:12px; background-color:#25D366; color:white; display:flex; align-items:center; justify-content:center; font-size:18px; font-weight:bold;">
+            💬 Hire Victor for Clearance
+        </div>
+    </a>
+    ''', unsafe_allow_html=True)
+
+# Navigation helper for long scrolls
+st.write(" ") # Spacer
+if st.button("↑ Back to Top"):
+    st.components.v1.html("<script>window.parent.scrollTo(0,0);</script>", height=0)
