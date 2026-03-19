@@ -1,3 +1,4 @@
+
 import streamlit as st
 
 # 1. Page Configuration
@@ -27,12 +28,16 @@ st.markdown("""
         text-align: center;
         margin-top: 20px;
     }
-    .total-card {
-        background-color: #ffffff;
-        padding: 20px;
-        border-left: 8px solid #d32f2f;
-        border-radius: 8px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    /* Lighting Fix for the Total Box */
+    .total-box {
+        background-color: #ffffff; 
+        padding: 30px; 
+        border-radius: 15px; 
+        border: 2px solid #1a2a6c;
+        box-shadow: 0px 4px 15px rgba(0,0,0,0.1);
+        text-align: center;
+        margin-top: 20px;
+        margin-bottom: 20px;
     }
     </style>
     <div class="stHeader">
@@ -81,19 +86,16 @@ if calc_mode == "Motor Vehicle":
 import_duty = cif_ugx * (duty_rate / 100)
 infrastructure = (cif_ugx * 0.015) if infra_levy else 0
 wht = (cif_ugx * 0.06) if apply_wht else 0
-
-# VAT is 18% of (CIF + Import Duty + Infrastructure Levy)
 vat_base = cif_ugx + import_duty + infrastructure
 vat = vat_base * 0.18
 
-# Total Calculation
 total_fees = import_duty + vat + wht + infrastructure + env_levy
 if calc_mode == "Motor Vehicle":
     total_fees += reg_fee
 else:
     total_fees += stamp_duty
 
-# 7. Display Results
+# 7. Detailed Breakdown
 st.divider()
 st.subheader("Detailed Breakdown")
 
@@ -109,16 +111,22 @@ with res_col2:
         st.write(f"**Env. Levy:** {env_levy:,.0f} UGX")
         st.write(f"**Reg. Fees:** {reg_fee:,.0f} UGX")
 
+# 8. High-Visibility Total Box (Lighting Fix)
 st.markdown(f"""
-    <div class="total-card">
-        <h2 style="margin:0; color:#d32f2f;">Total Payable</h2>
-        <h1 style="margin:0;">UGX {total_fees:,.0f}</h1>
+    <div class="total-box">
+        <h3 style="color: #1a2a6c; margin-bottom: 5px;">Total Tax Payable</h3>
+        <h1 style="color: #d32f2f; font-size: 3rem; margin: 0;">
+            UGX {total_fees:,.0f}
+        </h1>
+        <p style="color: #7f8c8d; font-size: 0.8rem; margin-top: 10px;">
+            Estimated for Customs Entry at Nakawa
+        </p>
     </div>
     """, unsafe_allow_html=True)
 
-# 8. WhatsApp Lead Generation
+# 9. WhatsApp Lead Generation (Using New Number: 0706631303)
 whatsapp_msg = f"Hello Victor, I need a clearance quote for a {calc_mode} with CIF {cif_usd} USD. Total estimate was {total_fees:,.0f} UGX."
-whatsapp_url = f"https://wa.me/256741899165?text={whatsapp_msg.replace(' ', '%20')}"
+whatsapp_url = f"https://wa.me/256706631303?text={whatsapp_msg.replace(' ', '%20')}"
 
 st.markdown(f'<a href="{whatsapp_url}" class="whatsapp-btn">🚀 Hire Victor for Clearance</a>', unsafe_allow_html=True)
 
