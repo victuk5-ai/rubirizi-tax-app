@@ -1,23 +1,23 @@
 import streamlit as st
 
-# 1. THIS MUST BE THE FIRST STREAMLIT COMMAND
+# THIS MUST BE THE VERY FIRST STREAMLIT COMMAND
 st.set_page_content(
     page_title="Rubirizi Tax Pro",
     page_icon="⚖️",
     layout="centered"
 )
 
-# 2. NOW WE ADD THE CSS AND OTHER STUFF
+# --- MOBILE SCROLL & REFRESH FIX ---
 st.markdown(
     """
     <style>
-    /* Prevents accidental pull-to-refresh on mobile */
     html, body, [data-testid="stAppViewContainer"] {
         overscroll-behavior-y: contain;
         scroll-behavior: smooth;
     }
-    
-    /* Support for Dark/Light Mode visibility on the Total Box */
+    .main {
+        overflow-x: hidden;
+    }
     .total-container {
         padding: 20px;
         border-radius: 10px;
@@ -58,6 +58,7 @@ if calc_type == "Motor Vehicle":
     elif vehicle_age == "Over 15 Years":
         env_levy = cif_ugx * 0.50
 
+# VAT is 18% of (CIF + Import Duty + Infra Levy)
 vat = (cif_ugx + import_duty + infra_levy) * 0.18
 wht = cif_ugx * 0.06
 total_tax = import_duty + env_levy + infra_levy + vat + wht
@@ -96,6 +97,6 @@ st.markdown(f'''
     </a>
     ''', unsafe_allow_html=True)
 
-# Navigation helper
+# Navigation helper for long scrolls
 if st.button("↑ Back to Top"):
     st.components.v1.html("<script>window.parent.scrollTo(0,0);</script>", height=0)
