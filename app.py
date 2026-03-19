@@ -1,14 +1,13 @@
-
 import streamlit as st
 
-# --- PAGE CONFIGURATION ---
+# 1. THIS MUST BE THE FIRST STREAMLIT COMMAND
 st.set_page_content(
     page_title="Rubirizi Tax Pro",
     page_icon="⚖️",
     layout="centered"
 )
 
-# --- ADVANCED THEME & SCROLL FIX (CSS) ---
+# 2. NOW WE ADD THE CSS AND OTHER STUFF
 st.markdown(
     """
     <style>
@@ -16,11 +15,6 @@ st.markdown(
     html, body, [data-testid="stAppViewContainer"] {
         overscroll-behavior-y: contain;
         scroll-behavior: smooth;
-    }
-    
-    /* Custom Styling for the Results Box */
-    .stAlert {
-        border-radius: 12px;
     }
     
     /* Support for Dark/Light Mode visibility on the Total Box */
@@ -64,7 +58,6 @@ if calc_type == "Motor Vehicle":
     elif vehicle_age == "Over 15 Years":
         env_levy = cif_ugx * 0.50
 
-# VAT is 18% of (CIF + Import Duty + Infra Levy)
 vat = (cif_ugx + import_duty + infra_levy) * 0.18
 wht = cif_ugx * 0.06
 total_tax = import_duty + env_levy + infra_levy + vat + wht
@@ -82,7 +75,6 @@ with res_col2:
         st.write(f"**Env. Levy:** {env_levy:,.0f}")
     st.write(f"**WHT (6%):** {wht:,.0f}")
 
-# The total box is styled to work in both Light and Dark mode
 st.markdown(f"""
 <div class="total-container">
     <p style="margin:0; font-size:1.2em;">Total Estimate</p>
@@ -104,7 +96,6 @@ st.markdown(f'''
     </a>
     ''', unsafe_allow_html=True)
 
-# Navigation helper for long scrolls
-st.write(" ") # Spacer
+# Navigation helper
 if st.button("↑ Back to Top"):
     st.components.v1.html("<script>window.parent.scrollTo(0,0);</script>", height=0)
